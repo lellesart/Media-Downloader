@@ -4,14 +4,14 @@ O **MediaDownloader** é uma aplicação web minimalista de extração e downloa
 
 Criada especialmente para funcionar como um serviço backend robusto, a aplicação foca na **ausência total de dependências no lado do cliente**. Todo o processamento intensivo (download e união de áudio/vídeo em alta resolução) ocorre no servidor, garantindo que o usuário final precise apenas de um navegador web comum para obter seus arquivos.
 
-## 🚀 Características
+## Características
 * **Sem Dependências Locais:** O cliente (usuário) não precisa instalar Python, Node.js ou extensões no navegador. Tudo acontece no servidor.
 * **Interface Moderna e Limpa:** UI minimalista, desenvolvida com Tailwind CSS diretamente via CDN.
 * **Alta Qualidade:** Suporte para baixar vídeos na máxima resolução disponível (até 4K, 8K) com áudio, graças à integração profunda com o FFmpeg.
 * **Download Direto:** Os arquivos não ficam retidos no servidor. O streaming é repassado em blocos (chunks) diretamente para o download do usuário e, após a conclusão, o arquivo temporário é destruído no servidor para economizar espaço (Self-cleaning architecture).
 * **Qualidade Dinâmica:** O sistema analisa a URL enviada e lista dinamicamente todas as opções de resoluções (vídeo) e bitrates (áudio) disponíveis para a mídia específica.
 
-## 🛠 Stack Tecnológica
+## Stack Tecnológica
 * **Linguagem:** Python 3.10+
 * **Backend Framework:** Flask
 * **Web Server (Produção):** Gunicorn
@@ -19,7 +19,7 @@ Criada especialmente para funcionar como um serviço backend robusto, a aplicaç
 * **Processamento de Mídia:** FFmpeg
 * **Frontend:** Vanilla JS, HTML5, Tailwind CSS
 
-## 🐳 Como fazer Deploy (Hospedagem)
+## Como fazer Deploy (Hospedagem)
 
 O MediaDownloader exige o **FFmpeg** instalado na máquina hospedeira. Por esse motivo, serviços de hospedagem de páginas estáticas (como GitHub Pages ou Vercel) **não** funcionarão.
 
@@ -35,7 +35,7 @@ O projeto já inclui um `Dockerfile` configurado para produção.
 5. O Render detectará automaticamente o `Dockerfile`. Deixe o ambiente como `Docker`.
 6. Crie o serviço. O Render irá baixar a imagem, instalar o FFmpeg, o Gunicorn e iniciar o serviço na porta correta automaticamente.
 
-## 💻 Como Rodar Localmente
+## Como Rodar Localmente
 
 Caso queira rodar, testar ou modificar o projeto no seu computador:
 
@@ -66,6 +66,38 @@ python3 app.py
 
 4. Acesse no navegador em `http://127.0.0.1:5000`.
 
-## 📜 Licença
+## Cookies do YouTube
+
+Cookies são necessários quando o YouTube pede login, confirmação de idade ou
+exibe a mensagem de verificação contra bots. Exporte um arquivo no formato
+Mozilla/Netscape. A primeira linha deve ser exatamente
+`# Netscape HTTP Cookie File` (ou `# HTTP Cookie File`). Nunca envie esse arquivo
+ao Git: ele dá acesso à sessão da conta.
+
+Configure **somente uma** destas opções:
+
+* `YOUTUBE_COOKIES_FILE`: caminho de um arquivo secreto montado pela hospedagem;
+* `YOUTUBE_COOKIES_BASE64`: conteúdo completo do arquivo convertido para Base64;
+* `YOUTUBE_COOKIES`: conteúdo bruto e multilinha do arquivo;
+* `cookies.txt` na raiz do app, mantido como compatibilidade para uso local.
+
+No macOS/Linux, gere o valor Base64 sem quebras de linha com:
+
+```bash
+base64 < cookies.txt | tr -d '\n'
+```
+
+No Render/Railway, salve o resultado como `YOUTUBE_COOKIES_BASE64`. Se o bloqueio
+persistir, configure também `YOUTUBE_USER_AGENT` com o User-Agent completo do
+mesmo navegador usado para criar os cookies. Cookies podem expirar ou ser
+invalidados pelo YouTube e precisarão ser exportados novamente.
+
+Para exportar diretamente pelo `yt-dlp` em uma máquina com o navegador instalado:
+
+```bash
+yt-dlp --cookies-from-browser chrome --cookies cookies.txt "https://www.youtube.com/"
+```
+
+## Licença
 
 Este projeto está licenciado sob a [MIT License](LICENSE).

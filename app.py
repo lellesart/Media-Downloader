@@ -2,6 +2,9 @@
 # MediaDownloader - Aplicação Web com Flask e yt-dlp
 # ==============================================================================
 import os
+import base64
+import binascii
+import hashlib
 import tempfile
 import threading
 import time
@@ -11,6 +14,119 @@ from flask import Flask, request, jsonify, render_template_string, Response
 import yt_dlp
 
 app = Flask(__name__)
+
+
+class CookieConfigurationError(ValueError):
+    """Erro seguro de configuração, sem expor o conteúdo dos cookies."""
+
+
+def _validar_conteudo_cookies(conteudo):
+    """Normaliza e valida um cookie jar no formato Mozilla/Netscape."""
+    conteudo = conteudo.lstrip('\ufeff').replace('\r\n', '\n').replace('\r', '\n')
+    linhas = conteudo.splitlines()
+    if not linhas or linhas[0].strip() not in (
+        '# Netscape HTTP Cookie File',
+        '# HTTP Cookie File',
+    ):
+        raise CookieConfigurationError(
+            "Os cookies não estão no formato Netscape. Exporte um cookies.txt "
+            "cuja primeira linha seja '# Netscape HTTP Cookie File'."
+        )
+
+    linhas_cookie = [
+        linha for linha in linhas
+        if linha.strip() and not linha.lstrip().startswith('#')
+    ]
+    if not linhas_cookie:
+        raise CookieConfigurationError("O arquivo de cookies está vazio.")
+    if any(len(linha.split('\t')) != 7 for linha in linhas_cookie):
+        raise CookieConfigurationError(
+            "O arquivo de cookies possui linhas inválidas; exporte-o novamente no formato Netscape."
+        )
+    return conteudo.rstrip('\n') + '\n'
+
+
+def _gravar_cookie_temporario(conteudo):
+    """Materializa conteúdo validado com LF e permissão exclusiva do processo."""
+    resumo = hashlib.sha256(conteudo.encode('utf-8')).hexdigest()[:16]
+    caminho = os.path.join(tempfile.gettempdir(), f'media-downloader-cookies-{resumo}.txt')
+    if not os.path.exists(caminho):
+        descritor, caminho_temporario = tempfile.mkstemp(
+            prefix='media-downloader-cookies-', suffix='.tmp'
+        )
+        try:
+            with os.fdopen(descritor, 'w', encoding='utf-8', newline='\n') as arquivo:
+                arquivo.write(conteudo)
+            os.chmod(caminho_temporario, 0o600)
+            os.replace(caminho_temporario, caminho)
+        finally:
+            if os.path.exists(caminho_temporario):
+                os.remove(caminho_temporario)
+    return caminho
+
+
+def obter_cookie_path():
+    """Resolve cookies por arquivo, Base64, texto bruto ou cookies.txt local."""
+    caminho_configurado = os.environ.get('YOUTUBE_COOKIES_FILE', '').strip()
+    conteudo_base64 = os.environ.get('YOUTUBE_COOKIES_BASE64', '').strip()
+    conteudo_bruto = os.environ.get('YOUTUBE_COOKIES', '')
+
+    fontes = sum(bool(valor) for valor in (
+        caminho_configurado, conteudo_base64, conteudo_bruto,
+    ))
+    if fontes > 1:
+        raise CookieConfigurationError(
+            "Configure somente uma fonte: YOUTUBE_COOKIES_FILE, "
+            "YOUTUBE_COOKIES_BASE64 ou YOUTUBE_COOKIES."
+        )
+
+    if caminho_configurado:
+        caminho = os.path.abspath(os.path.expanduser(caminho_configurado))
+        if not os.path.isfile(caminho):
+            raise CookieConfigurationError(
+                "O arquivo definido em YOUTUBE_COOKIES_FILE não foi encontrado."
+            )
+        try:
+            with open(caminho, 'r', encoding='utf-8-sig') as arquivo:
+                conteudo = _validar_conteudo_cookies(arquivo.read())
+        except UnicodeDecodeError as exc:
+            raise CookieConfigurationError("O arquivo de cookies não está em UTF-8.") from exc
+        return _gravar_cookie_temporario(conteudo)
+
+    if conteudo_base64:
+        try:
+            conteudo_bruto = base64.b64decode(
+                conteudo_base64, validate=True
+            ).decode('utf-8-sig')
+        except (binascii.Error, UnicodeDecodeError) as exc:
+            raise CookieConfigurationError(
+                "YOUTUBE_COOKIES_BASE64 não contém um arquivo UTF-8 em Base64 válido."
+            ) from exc
+
+    if conteudo_bruto:
+        conteudo = _validar_conteudo_cookies(conteudo_bruto)
+        return _gravar_cookie_temporario(conteudo)
+
+    caminho_local = os.path.join(os.path.dirname(__file__), 'cookies.txt')
+    if os.path.isfile(caminho_local):
+        try:
+            with open(caminho_local, 'r', encoding='utf-8-sig') as arquivo:
+                conteudo = _validar_conteudo_cookies(arquivo.read())
+        except UnicodeDecodeError as exc:
+            raise CookieConfigurationError("O arquivo cookies.txt não está em UTF-8.") from exc
+        return _gravar_cookie_temporario(conteudo)
+    return None
+
+
+def aplicar_autenticacao_youtube(ydl_opts):
+    """Aplica ao yt-dlp a autenticação configurada para todos os endpoints."""
+    cookie_path = obter_cookie_path()
+    if cookie_path:
+        ydl_opts['cookiefile'] = cookie_path
+    user_agent = os.environ.get('YOUTUBE_USER_AGENT', '').strip()
+    if user_agent:
+        ydl_opts['http_headers'] = {'User-Agent': user_agent}
+    return ydl_opts
 
 # ==============================================================================
 # FRONTEND (HTML, CSS, JS) - Alinhado ao estilo obs.desk / subtexto / contexto
@@ -268,6 +384,15 @@ HTML_TEMPLATE = r"""
 def formatar_erro_ytdl(e):
     """Retorna uma mensagem de erro compreensível ao usuário"""
     err_str = str(e)
+    if isinstance(e, CookieConfigurationError):
+        return str(e)
+    if "Sign in to confirm you’re not a bot" in err_str or "Sign in to confirm you're not a bot" in err_str:
+        return (
+            "O YouTube bloqueou esta sessão. Atualize os cookies da conta e confirme "
+            "que eles foram exportados no formato Netscape."
+        )
+    if "cookies" in err_str.lower() and "netscape" in err_str.lower():
+        return "O arquivo de cookies é inválido; exporte-o novamente no formato Netscape."
     if "Unsupported URL" in err_str:
         return "A plataforma ou link inserido não é suportado pelo sistema."
     if "Private video" in err_str or "is private" in err_str:
@@ -324,8 +449,14 @@ def obter_info():
     if not url: 
         return jsonify({"sucesso": False, "erro": "URL inválida"}), 400
 
-    ydl_opts = {'quiet': True, 'extract_flat': True, 'nocheckcertificate': True}
+    ydl_opts = {
+        'quiet': True,
+        'extract_flat': True,
+        'nocheckcertificate': True,
+    }
+
     try:
+        aplicar_autenticacao_youtube(ydl_opts)
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=False)
             return jsonify({"sucesso": True, "titulo": info.get('title', 'Vídeo Desconhecido')})
@@ -378,6 +509,7 @@ def baixar():
             ydl_opts['format'] = 'bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]/best[height<=720][ext=mp4]/best' 
 
     try:
+        aplicar_autenticacao_youtube(ydl_opts)
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             # 1. Extrai e faz o download
             info = ydl.extract_info(url, download=True)
