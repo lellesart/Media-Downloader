@@ -11,6 +11,16 @@ Criada especialmente para funcionar como um serviço backend robusto, a aplicaç
 * **Download Direto:** Os arquivos não ficam retidos no servidor. O streaming é repassado em blocos (chunks) diretamente para o download do usuário e, após a conclusão, o arquivo temporário é destruído no servidor para economizar espaço (Self-cleaning architecture).
 * **Qualidade Dinâmica:** O sistema analisa a URL enviada e lista dinamicamente todas as opções de resoluções (vídeo) e bitrates (áudio) disponíveis para a mídia específica.
 
+## Plataformas
+
+O motor `yt-dlp` permite trabalhar com diferentes plataformas pelo mesmo fluxo. O projeto
+foi preparado para YouTube, SoundCloud e Instagram, incluindo vídeo e extração de áudio
+quando a plataforma disponibiliza o formato. Links públicos tendem a funcionar sem login;
+conteúdos privados, restritos ou protegidos podem exigir cookies válidos da própria plataforma.
+
+A compatibilidade depende das mudanças feitas por cada site. Spotify e Apple Music não são
+tratados como fontes de download direto neste projeto.
+
 ## Stack Tecnológica
 * **Linguagem:** Python 3.10+
 * **Backend Framework:** Flask
@@ -66,10 +76,10 @@ python3 app.py
 
 4. Acesse no navegador em `http://127.0.0.1:5000`.
 
-## Cookies do YouTube
+## Cookies e autenticação
 
-Cookies são necessários quando o YouTube pede login, confirmação de idade ou
-exibe a mensagem de verificação contra bots. Exporte um arquivo no formato
+Cookies podem ser necessários quando uma plataforma pede login, confirmação de idade ou
+exibe uma mensagem de verificação contra bots. Exporte um arquivo no formato
 Mozilla/Netscape. A primeira linha deve ser exatamente
 `# Netscape HTTP Cookie File` (ou `# HTTP Cookie File`). Nunca envie esse arquivo
 ao Git: ele dá acesso à sessão da conta.
@@ -87,16 +97,19 @@ No macOS/Linux, gere o valor Base64 sem quebras de linha com:
 base64 < cookies.txt | tr -d '\n'
 ```
 
-No Render/Railway, salve o resultado como `YOUTUBE_COOKIES_BASE64`. Se o bloqueio
-persistir, configure também `YOUTUBE_USER_AGENT` com o User-Agent completo do
-mesmo navegador usado para criar os cookies. Cookies podem expirar ou ser
-invalidados pelo YouTube e precisarão ser exportados novamente. A imagem Docker
+No Render/Railway, prefira salvar o arquivo como Secret File e configurar
+`YOUTUBE_COOKIES_FILE` com o caminho montado. O nome das variáveis é mantido por
+compatibilidade, mas os cookies são aplicados aos extractors suportados, incluindo
+SoundCloud e Instagram. Se o bloqueio persistir, configure também `YOUTUBE_USER_AGENT`
+com o User-Agent completo do mesmo navegador usado para criar os cookies. Cookies podem expirar ou ser
+invalidados e precisarão ser exportados novamente. A imagem Docker
 também instala Deno e os scripts EJS necessários para os desafios JavaScript atuais.
 
 Para exportar diretamente pelo `yt-dlp` em uma máquina com o navegador instalado:
 
 ```bash
-yt-dlp --cookies-from-browser chrome "https://www.youtube.com/robots.txt"
+yt-dlp --cookies-from-browser chrome --cookies cookies.txt \
+  "https://www.youtube.com/watch?v=VIDEO_PUBLICO"
 ```
 
 ## Licença

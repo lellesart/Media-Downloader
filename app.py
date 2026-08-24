@@ -9,11 +9,31 @@ import tempfile
 import threading
 import time
 import mimetypes
-from urllib.parse import quote
+from urllib.parse import quote, urlparse
 from flask import Flask, request, jsonify, render_template_string, Response
 import yt_dlp
 
 app = Flask(__name__)
+
+
+PLATAFORMAS_CONHECIDAS = (
+    ('YouTube', ('youtube.com', 'youtu.be', 'music.youtube.com')),
+    ('SoundCloud', ('soundcloud.com', 'on.soundcloud.com')),
+    ('Instagram', ('instagram.com', 'instagr.am')),
+)
+
+
+def identificar_plataforma(url):
+    """Identifica plataformas conhecidas sem impedir extractors genéricos."""
+    try:
+        host = (urlparse(url).hostname or '').lower().removeprefix('www.')
+    except ValueError:
+        return 'Outro site'
+
+    for nome, dominios in PLATAFORMAS_CONHECIDAS:
+        if any(host == dominio or host.endswith(f'.{dominio}') for dominio in dominios):
+            return nome
+    return 'Outro site'
 
 
 class CookieConfigurationError(ValueError):
@@ -110,8 +130,8 @@ def obter_cookie_path():
     return None
 
 
-def aplicar_autenticacao_youtube(ydl_opts):
-    """Aplica ao yt-dlp a autenticação configurada para todos os endpoints."""
+def aplicar_autenticacao(ydl_opts):
+    """Aplica cookies e User-Agent configurados a qualquer plataforma."""
     cookie_path = obter_cookie_path()
     if cookie_path:
         ydl_opts['cookiefile'] = cookie_path
@@ -188,9 +208,9 @@ HTML_TEMPLATE = r"""
         
         <!-- Input URL -->
         <div class="flex flex-col gap-2">
-            <label class="text-xs uppercase tracking-widest text-zinc-500 font-bold font-['Space_Grotesk']">Cole o link do vídeo</label>
+            <label class="text-xs uppercase tracking-widest text-zinc-500 font-bold font-['Space_Grotesk']">Cole o link de vídeo ou música</label>
             <div class="flex flex-col sm:flex-row gap-3">
-                <input type="text" id="urlInput" class="bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-sm text-zinc-300 placeholder-zinc-600 focus:outline-none focus:border-zinc-700 focus:ring-1 focus:ring-zinc-700 transition w-full" placeholder="https://www.youtube.com/watch?v=...">
+                <input type="text" id="urlInput" class="bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-sm text-zinc-300 placeholder-zinc-600 focus:outline-none focus:border-zinc-700 focus:ring-1 focus:ring-zinc-700 transition w-full" placeholder="YouTube, SoundCloud ou Instagram...">
                 
                 <button onclick="carregarInfo()" id="loadBtn" class="bg-zinc-100 text-zinc-950 font-bold text-xs uppercase tracking-wider px-6 py-3 rounded-xl hover:bg-white transition active:scale-95 duration-150 flex items-center justify-center gap-2 whitespace-nowrap">
                     <span id="loadText">Analisar</span>
@@ -209,7 +229,10 @@ HTML_TEMPLATE = r"""
         <div id="downloadArea" class="hidden border-t border-zinc-800/80 pt-6 flex flex-col gap-4">
             
             <div class="bg-zinc-950/40 p-4 rounded-xl border border-zinc-800/60 flex flex-col gap-1">
-                <span class="text-[10px] uppercase tracking-widest text-zinc-500 font-bold font-['Space_Grotesk']">Vídeo Identificado</span>
+                <div class="flex items-center justify-between gap-3">
+                    <span class="text-[10px] uppercase tracking-widest text-zinc-500 font-bold font-['Space_Grotesk']">Mídia Identificada</span>
+                    <span id="platformBadge" class="rounded-full border border-zinc-700 bg-zinc-900 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-400">Outro site</span>
+                </div>
                 <p id="videoTitle" class="text-sm font-semibold text-zinc-200 truncate"></p>
             </div>
             
@@ -286,6 +309,7 @@ HTML_TEMPLATE = r"""
                 
                 if (data.sucesso) {
                     document.getElementById('videoTitle').textContent = data.titulo;
+                    document.getElementById('platformBadge').textContent = data.plataforma || 'Outro site';
                     document.getElementById('downloadArea').classList.remove('hidden');
                     atualizarOpcoesQualidade();
                 } else {
@@ -488,7 +512,7 @@ def formatar_erro_ytdl(e):
     )
     if erro_bot:
         return (
-            "O YouTube recusou a sessão deste servidor. Para vídeos públicos, tente novamente "
+            "A plataforma recusou a sessão deste servidor. Para conteúdo público, tente novamente "
             "após alguns minutos; para conteúdo restrito, configure cookies novos exportados "
             "no formato Netscape e, se necessário, o User-Agent do mesmo navegador."
         )
@@ -496,12 +520,12 @@ def formatar_erro_ytdl(e):
         return "O arquivo de cookies é inválido; exporte-o novamente no formato Netscape."
     if "Unsupported URL" in err_str:
         return "A plataforma ou link inserido não é suportado pelo sistema."
-    if "Private video" in err_str or "is private" in err_str:
-        return "Este vídeo é privado ou requer autorização especial para acessar."
+    if "Private video" in err_str or "is private" in err_str or "login required" in err_str.lower():
+        return "Esta mídia é privada ou exige login para ser acessada."
     if "confirm your age" in err_str or "age-gated" in err_str:
         return "Este vídeo possui restrição de idade e não pode ser baixado."
-    if "Video unavailable" in err_str:
-        return "Este vídeo está indisponível ou foi removido."
+    if "Video unavailable" in err_str or "Post unavailable" in err_str:
+        return "Esta mídia está indisponível ou foi removida."
     if "geolocation" in err_str or "geoblocked" in err_str:
         return "Este vídeo está bloqueado para a nossa região geográfica."
     # Divide para simplificar o traceback técnico longo
@@ -557,10 +581,14 @@ def obter_info():
     }
 
     try:
-        aplicar_autenticacao_youtube(ydl_opts)
+        aplicar_autenticacao(ydl_opts)
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=False)
-            return jsonify({"sucesso": True, "titulo": info.get('title', 'Vídeo Desconhecido')})
+            return jsonify({
+                "sucesso": True,
+                "titulo": info.get('title', 'Mídia desconhecida'),
+                "plataforma": identificar_plataforma(url),
+            })
     except Exception as e:
         return jsonify({"sucesso": False, "erro": formatar_erro_ytdl(e)}), 400
 
@@ -610,7 +638,7 @@ def baixar():
             ydl_opts['format'] = 'bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]/best[height<=720][ext=mp4]/best' 
 
     try:
-        aplicar_autenticacao_youtube(ydl_opts)
+        aplicar_autenticacao(ydl_opts)
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             # 1. Extrai e faz o download
             info = ydl.extract_info(url, download=True)
