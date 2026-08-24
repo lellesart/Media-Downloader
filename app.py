@@ -178,8 +178,8 @@ HTML_TEMPLATE = r"""
 <body class="text-zinc-100 min-h-screen flex flex-col items-center justify-center p-4 md:p-8 selection:bg-zinc-800 selection:text-white">
 
     <div class="max-w-2xl w-full mb-6 mt-4">
-        <h1 class="text-white text-5xl font-['Space_Grotesk'] font-bold tracking-tighter lowercase flex items-center gap-3">
-            <i class="fa-solid fa-cloud-arrow-down text-zinc-100 text-3xl"></i> media.downloader
+        <h1 class="text-white text-2xl sm:text-5xl font-['Space_Grotesk'] font-bold tracking-tighter lowercase flex items-center gap-2 sm:gap-3 leading-tight whitespace-nowrap">
+            <i class="fa-solid fa-cloud-arrow-down text-zinc-100 text-xl sm:text-3xl flex-shrink-0"></i> media.downloader
         </h1>
     </div>
 
