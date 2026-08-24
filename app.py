@@ -155,13 +155,21 @@ HTML_TEMPLATE = r"""
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Fontes -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
     <!-- Icones FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         body {
-            font-family: 'Inter', sans-serif;
+            font-family: 'Space Grotesk', sans-serif;
             background-color: #09090b; 
+        }
+
+        .brand-title {
+            width: 100%;
+            font-size: clamp(2.25rem, 12vw, 5rem);
+            line-height: 0.9;
+            letter-spacing: -0.09em;
+            white-space: nowrap;
         }
         ::-webkit-scrollbar { width: 4px; height: 4px; }
         ::-webkit-scrollbar-track { background: #18181b; }
@@ -195,10 +203,10 @@ HTML_TEMPLATE = r"""
         }
     </style>
 </head>
-<body class="text-zinc-100 min-h-screen flex flex-col items-center justify-center p-4 md:p-8 selection:bg-zinc-800 selection:text-white">
+<body class="text-zinc-100 min-h-screen flex flex-col items-center justify-start px-4 pt-10 pb-8 sm:px-8 sm:pt-16 selection:bg-zinc-800 selection:text-white">
 
-    <div class="max-w-2xl w-full mb-8 mt-4">
-        <h1 class="w-full text-white text-3xl sm:text-6xl font-['Space_Grotesk'] font-bold tracking-[-0.08em] lowercase leading-[0.9] whitespace-nowrap">
+    <div class="max-w-2xl w-full mb-6">
+        <h1 class="brand-title text-white font-['Space_Grotesk'] font-bold lowercase">
             media.downloader
         </h1>
     </div>
