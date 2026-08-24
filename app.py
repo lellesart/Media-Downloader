@@ -164,6 +164,15 @@ HTML_TEMPLATE = r"""
             border-left-color: #064e3b;
         }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        .download-progress-indeterminate {
+            width: 35%;
+            animation: progress-slide 1.35s ease-in-out infinite;
+        }
+        @keyframes progress-slide {
+            0% { transform: translateX(-115%); }
+            100% { transform: translateX(315%); }
+        }
     </style>
 </head>
 <body class="text-zinc-100 min-h-screen flex flex-col items-center justify-center p-4 md:p-8 selection:bg-zinc-800 selection:text-white">
@@ -238,6 +247,19 @@ HTML_TEMPLATE = r"""
                     </button>
                 </div>
             </div>
+
+            <div id="downloadStatus" class="hidden rounded-xl border border-emerald-900/70 bg-emerald-950/20 p-4" role="status" aria-live="polite">
+                <div class="flex items-start gap-3">
+                    <i id="downloadStatusIcon" class="fa-solid fa-cloud-arrow-down text-emerald-300 mt-0.5"></i>
+                    <div class="min-w-0 flex-1">
+                        <p id="downloadStatusTitle" class="text-sm font-semibold text-emerald-100">Preparando o download...</p>
+                        <p id="downloadStatusDetail" class="mt-1 text-xs leading-relaxed text-emerald-200/70">O servidor está baixando e processando o arquivo. Isso pode levar alguns minutos.</p>
+                    </div>
+                </div>
+                <div id="downloadProgressTrack" class="mt-3 hidden h-1.5 overflow-hidden rounded-full bg-emerald-950" role="progressbar" aria-label="Progresso da transferência" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                    <div id="downloadProgressBar" class="h-full rounded-full bg-emerald-300 transition-[width] duration-200" style="width: 0%"></div>
+                </div>
+            </div>
         </div>
     </main>
 
@@ -280,6 +302,10 @@ HTML_TEMPLATE = r"""
             const format = document.getElementById('formatSelect').value;
             const quality = document.getElementById('qualitySelect').value;
             alternarBotao('downloadBtn', 'downloadText', 'downloadSpinner', true, 'Baixando...');
+            atualizarStatusDownload(
+                'Preparando o download...',
+                'O servidor está baixando e processando o arquivo. Isso pode levar alguns minutos.'
+            );
 
             try {
                 const response = await fetch('/api/baixar', {
@@ -292,6 +318,13 @@ HTML_TEMPLATE = r"""
                     const data = await response.json();
                     throw new Error(data.erro || 'Falha no download');
                 }
+
+                const totalBytes = Number(response.headers.get('Content-Length')) || 0;
+                atualizarStatusDownload(
+                    'Transferindo para o seu aparelho...',
+                    totalBytes ? 'O arquivo está pronto. Não feche esta página até terminar.' : 'O arquivo está pronto e será enviado agora.',
+                    totalBytes ? 0 : null
+                );
 
                 let filename = 'download';
                 const disposition = response.headers.get('Content-Disposition');
@@ -311,7 +344,30 @@ HTML_TEMPLATE = r"""
                     }
                 }
 
-                const blob = await response.blob();
+                let blob;
+                if (response.body && response.body.getReader) {
+                    const reader = response.body.getReader();
+                    const chunks = [];
+                    let receivedBytes = 0;
+
+                    while (true) {
+                        const { done, value } = await reader.read();
+                        if (done) break;
+                        chunks.push(value);
+                        receivedBytes += value.length;
+                        if (totalBytes) {
+                            atualizarStatusDownload(
+                                'Transferindo para o seu aparelho...',
+                                `${formatarBytes(receivedBytes)} de ${formatarBytes(totalBytes)}`,
+                                Math.min(100, Math.round((receivedBytes / totalBytes) * 100))
+                            );
+                        }
+                    }
+                    blob = new Blob(chunks, {type: response.headers.get('Content-Type') || 'application/octet-stream'});
+                } else {
+                    blob = await response.blob();
+                }
+
                 const windowUrl = window.URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = windowUrl;
@@ -320,12 +376,56 @@ HTML_TEMPLATE = r"""
                 a.click();
                 a.remove();
                 window.URL.revokeObjectURL(windowUrl);
+                atualizarStatusDownload('Download concluído!', 'O arquivo foi enviado para a pasta de downloads do seu aparelho.', 100);
 
             } catch (err) {
                 mostrarErro("Erro ao baixar: " + err.message);
+                atualizarStatusDownload('Download interrompido', 'Confira a mensagem de erro acima e tente novamente.', 0, true);
             } finally {
                 alternarBotao('downloadBtn', 'downloadText', 'downloadSpinner', false, 'Baixar Agora');
             }
+        }
+
+        function atualizarStatusDownload(titulo, detalhe, progresso = null, erro = false) {
+            const status = document.getElementById('downloadStatus');
+            const icon = document.getElementById('downloadStatusIcon');
+            const title = document.getElementById('downloadStatusTitle');
+            const detail = document.getElementById('downloadStatusDetail');
+            const track = document.getElementById('downloadProgressTrack');
+            const bar = document.getElementById('downloadProgressBar');
+
+            status.classList.remove('hidden', 'border-emerald-900/70', 'bg-emerald-950/20', 'border-rose-900/70', 'bg-rose-950/20');
+            status.classList.add(erro ? 'border-rose-900/70' : 'border-emerald-900/70', erro ? 'bg-rose-950/20' : 'bg-emerald-950/20');
+            icon.className = erro
+                ? 'fa-solid fa-triangle-exclamation text-rose-300 mt-0.5'
+                : progresso === 100
+                    ? 'fa-solid fa-circle-check text-emerald-300 mt-0.5'
+                    : 'fa-solid fa-cloud-arrow-down text-emerald-300 mt-0.5';
+            title.className = erro ? 'text-sm font-semibold text-rose-100' : 'text-sm font-semibold text-emerald-100';
+            detail.className = erro ? 'mt-1 text-xs leading-relaxed text-rose-200/70' : 'mt-1 text-xs leading-relaxed text-emerald-200/70';
+            title.textContent = titulo;
+            detail.textContent = detalhe;
+
+            if (progresso === null) {
+                track.classList.remove('hidden');
+                bar.classList.add('download-progress-indeterminate');
+                bar.style.width = '35%';
+                track.removeAttribute('aria-valuenow');
+                track.setAttribute('aria-valuetext', 'Preparando o download');
+            } else {
+                track.classList.remove('hidden');
+                bar.classList.remove('download-progress-indeterminate');
+                bar.style.width = `${progresso}%`;
+                track.setAttribute('aria-valuenow', String(progresso));
+                track.setAttribute('aria-valuetext', `${progresso}% concluído`);
+            }
+        }
+
+        function formatarBytes(bytes) {
+            if (!bytes) return '0 B';
+            const unidades = ['B', 'KB', 'MB', 'GB'];
+            const indice = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), unidades.length - 1);
+            return `${(bytes / Math.pow(1024, indice)).toFixed(indice ? 1 : 0)} ${unidades[indice]}`;
         }
 
         function mostrarErro(msg) {
