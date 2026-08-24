@@ -6,6 +6,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ffmpeg \
     ca-certificates \
     curl \
+    unzip \
     && rm -rf /var/lib/apt/lists/*
 
 # yt-dlp precisa de um runtime JavaScript para resolver os desafios atuais do YouTube.
