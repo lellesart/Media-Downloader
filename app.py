@@ -66,7 +66,7 @@ def _gravar_cookie_temporario(conteudo):
 
 
 def obter_cookie_path():
-    """Resolve cookies por arquivo, Base64, texto bruto ou cookies.txt local."""
+    """Resolve cookies apenas de fontes explicitamente configuradas."""
     caminho_configurado = os.environ.get('YOUTUBE_COOKIES_FILE', '').strip()
     conteudo_base64 = os.environ.get('YOUTUBE_COOKIES_BASE64', '').strip()
     conteudo_bruto = os.environ.get('YOUTUBE_COOKIES', '')
@@ -107,14 +107,6 @@ def obter_cookie_path():
         conteudo = _validar_conteudo_cookies(conteudo_bruto)
         return _gravar_cookie_temporario(conteudo)
 
-    caminho_local = os.path.join(os.path.dirname(__file__), 'cookies.txt')
-    if os.path.isfile(caminho_local):
-        try:
-            with open(caminho_local, 'r', encoding='utf-8-sig') as arquivo:
-                conteudo = _validar_conteudo_cookies(arquivo.read())
-        except UnicodeDecodeError as exc:
-            raise CookieConfigurationError("O arquivo cookies.txt não está em UTF-8.") from exc
-        return _gravar_cookie_temporario(conteudo)
     return None
 
 
@@ -126,6 +118,8 @@ def aplicar_autenticacao_youtube(ydl_opts):
     user_agent = os.environ.get('YOUTUBE_USER_AGENT', '').strip()
     if user_agent:
         ydl_opts['http_headers'] = {'User-Agent': user_agent}
+    # Reduz o risco de a sessão convidada/da conta atingir o limite de requisições.
+    ydl_opts.setdefault('sleep_interval_requests', 1)
     return ydl_opts
 
 # ==============================================================================
@@ -386,10 +380,17 @@ def formatar_erro_ytdl(e):
     err_str = str(e)
     if isinstance(e, CookieConfigurationError):
         return str(e)
-    if "Sign in to confirm you’re not a bot" in err_str or "Sign in to confirm you're not a bot" in err_str:
+    erro_bot = (
+        "Sign in to confirm" in err_str
+        or "confirm you’re not a bot" in err_str
+        or "confirm you're not a bot" in err_str
+        or "LOGIN_REQUIRED" in err_str
+    )
+    if erro_bot:
         return (
-            "O YouTube bloqueou esta sessão. Atualize os cookies da conta e confirme "
-            "que eles foram exportados no formato Netscape."
+            "O YouTube recusou a sessão deste servidor. Para vídeos públicos, tente novamente "
+            "após alguns minutos; para conteúdo restrito, configure cookies novos exportados "
+            "no formato Netscape e, se necessário, o User-Agent do mesmo navegador."
         )
     if "cookies" in err_str.lower() and "netscape" in err_str.lower():
         return "O arquivo de cookies é inválido; exporte-o novamente no formato Netscape."

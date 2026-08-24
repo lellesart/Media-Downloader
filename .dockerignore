@@ -1,0 +1,9 @@
+.venv/
+__pycache__/
+*.pyc
+cookies.txt
+.env
+.tempmediaStorage/
+Dockerfile
+.dockerignore
+.git/

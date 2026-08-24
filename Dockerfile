@@ -4,7 +4,12 @@ FROM python:3.10-slim
 # Instala o FFmpeg (necessário para o yt-dlp fundir áudio e vídeo de alta qualidade)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ffmpeg \
+    ca-certificates \
+    curl \
     && rm -rf /var/lib/apt/lists/*
+
+# yt-dlp precisa de um runtime JavaScript para resolver os desafios atuais do YouTube.
+RUN curl -fsSL https://deno.land/install.sh | DENO_INSTALL=/usr/local sh
 
 # Define o diretório de trabalho na imagem
 WORKDIR /app

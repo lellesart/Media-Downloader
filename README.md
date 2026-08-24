@@ -79,7 +79,7 @@ Configure **somente uma** destas opções:
 * `YOUTUBE_COOKIES_FILE`: caminho de um arquivo secreto montado pela hospedagem;
 * `YOUTUBE_COOKIES_BASE64`: conteúdo completo do arquivo convertido para Base64;
 * `YOUTUBE_COOKIES`: conteúdo bruto e multilinha do arquivo;
-* `cookies.txt` na raiz do app, mantido como compatibilidade para uso local.
+* Não coloque `cookies.txt` na imagem ou no repositório; use uma das três variáveis acima.
 
 No macOS/Linux, gere o valor Base64 sem quebras de linha com:
 
@@ -90,12 +90,13 @@ base64 < cookies.txt | tr -d '\n'
 No Render/Railway, salve o resultado como `YOUTUBE_COOKIES_BASE64`. Se o bloqueio
 persistir, configure também `YOUTUBE_USER_AGENT` com o User-Agent completo do
 mesmo navegador usado para criar os cookies. Cookies podem expirar ou ser
-invalidados pelo YouTube e precisarão ser exportados novamente.
+invalidados pelo YouTube e precisarão ser exportados novamente. A imagem Docker
+também instala Deno e os scripts EJS necessários para os desafios JavaScript atuais.
 
 Para exportar diretamente pelo `yt-dlp` em uma máquina com o navegador instalado:
 
 ```bash
-yt-dlp --cookies-from-browser chrome --cookies cookies.txt "https://www.youtube.com/"
+yt-dlp --cookies-from-browser chrome "https://www.youtube.com/robots.txt"
 ```
 
 ## Licença
