@@ -180,8 +180,8 @@ HTML_TEMPLATE = r"""
             border-left-color: #09090b;
         }
         .spinner-emerald {
-            border-top-color: #064e3b;
-            border-left-color: #064e3b;
+            border-top-color: #ffffff;
+            border-left-color: #ffffff;
         }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
@@ -197,22 +197,21 @@ HTML_TEMPLATE = r"""
 </head>
 <body class="text-zinc-100 min-h-screen flex flex-col items-center justify-center p-4 md:p-8 selection:bg-zinc-800 selection:text-white">
 
-    <div class="max-w-2xl w-full mb-6 mt-4">
-        <h1 class="text-white text-2xl sm:text-5xl font-['Space_Grotesk'] font-bold tracking-tighter lowercase flex items-center gap-2 sm:gap-3 leading-tight whitespace-nowrap">
-            <i class="fa-solid fa-cloud-arrow-down text-zinc-100 text-xl sm:text-3xl flex-shrink-0"></i> media.downloader
+    <div class="max-w-2xl w-full mb-8 mt-4">
+        <h1 class="w-full text-white text-3xl sm:text-6xl font-['Space_Grotesk'] font-bold tracking-[-0.08em] lowercase leading-[0.9] whitespace-nowrap">
+            media.downloader
         </h1>
     </div>
 
-    <!-- Bento Card Principal -->
-    <main class="w-full max-w-2xl bg-zinc-900/90 border border-zinc-800 rounded-2xl p-6 transition-all duration-300 hover:border-zinc-700/80 shadow-xl flex flex-col gap-5">
+    <!-- Entrada principal -->
+    <main class="w-full max-w-2xl bg-zinc-900 border border-zinc-800 rounded-lg p-4 sm:p-6 transition-all duration-300 hover:border-zinc-700 shadow-xl flex flex-col gap-4">
         
         <!-- Input URL -->
-        <div class="flex flex-col gap-2">
-            <label class="text-xs uppercase tracking-widest text-zinc-500 font-bold font-['Space_Grotesk']">Cole o link de vídeo ou música</label>
+        <div class="flex flex-col gap-3">
             <div class="flex flex-col sm:flex-row gap-3">
-                <input type="text" id="urlInput" class="bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-sm text-zinc-300 placeholder-zinc-600 focus:outline-none focus:border-zinc-700 focus:ring-1 focus:ring-zinc-700 transition w-full" placeholder="YouTube, SoundCloud ou Instagram...">
+                <input type="text" id="urlInput" aria-label="Link da música ou vídeo" class="bg-zinc-950 border border-zinc-800 rounded-lg px-4 py-3 text-sm text-zinc-300 placeholder-zinc-600 focus:outline-none focus:border-zinc-700 focus:ring-1 focus:ring-zinc-700 transition w-full" placeholder="Cole o link da música ou vídeo">
                 
-                <button onclick="carregarInfo()" id="loadBtn" class="bg-zinc-100 text-zinc-950 font-bold text-xs uppercase tracking-wider px-6 py-3 rounded-xl hover:bg-white transition active:scale-95 duration-150 flex items-center justify-center gap-2 whitespace-nowrap">
+                <button onclick="carregarInfo()" id="loadBtn" class="bg-zinc-100 text-zinc-950 font-bold text-xs uppercase tracking-wider px-6 py-3 rounded-lg hover:bg-white transition active:scale-95 duration-150 flex items-center justify-center gap-2 whitespace-nowrap">
                     <span id="loadText">Analisar</span>
                     <div id="loadSpinner" class="spinner spinner-dark hidden"></div>
                 </button>
@@ -220,15 +219,15 @@ HTML_TEMPLATE = r"""
         </div>
 
         <!-- Banner de Erro -->
-        <div id="errorMsg" class="hidden bg-rose-950/20 border border-rose-800/60 p-4 rounded-xl text-rose-400 text-xs font-medium flex items-center gap-2">
+        <div id="errorMsg" class="hidden bg-rose-950 border border-rose-800 p-4 rounded-lg text-rose-300 text-xs font-medium flex items-center gap-2">
             <i class="fa-solid fa-triangle-exclamation"></i>
             <span id="errorText">Erro detectado</span>
         </div>
 
         <!-- Área de Download -->
-        <div id="downloadArea" class="hidden border-t border-zinc-800/80 pt-6 flex flex-col gap-4">
+        <div id="downloadArea" class="hidden border-t border-zinc-800 pt-6 flex flex-col gap-4">
             
-            <div class="bg-zinc-950/40 p-4 rounded-xl border border-zinc-800/60 flex flex-col gap-1">
+            <div class="bg-zinc-950 p-4 rounded-lg border border-zinc-800 flex flex-col gap-1">
                 <div class="flex items-center justify-between gap-3">
                     <span class="text-[10px] uppercase tracking-widest text-zinc-500 font-bold font-['Space_Grotesk']">Mídia Identificada</span>
                     <span id="platformBadge" class="rounded-full border border-zinc-700 bg-zinc-900 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-400">Outro site</span>
@@ -240,7 +239,7 @@ HTML_TEMPLATE = r"""
                 <div class="flex flex-col gap-2">
                     <label class="text-xs uppercase tracking-widest text-zinc-500 font-bold font-['Space_Grotesk']">Formato de Saída</label>
                     <div class="relative">
-                        <select id="formatSelect" onchange="atualizarOpcoesQualidade()" class="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-sm text-zinc-300 focus:outline-none focus:border-zinc-700 transition cursor-pointer appearance-none">
+                        <select id="formatSelect" onchange="atualizarOpcoesQualidade()" class="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-4 py-3 text-sm text-zinc-300 focus:outline-none focus:border-zinc-700 transition cursor-pointer appearance-none">
                             <option value="video">Vídeo (MP4)</option>
                             <option value="audio">Áudio (MP3)</option>
                         </select>
@@ -253,7 +252,7 @@ HTML_TEMPLATE = r"""
                 <div class="flex flex-col gap-2">
                     <label class="text-xs uppercase tracking-widest text-zinc-500 font-bold font-['Space_Grotesk']">Qualidade</label>
                     <div class="relative">
-                        <select id="qualitySelect" class="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-sm text-zinc-300 focus:outline-none focus:border-zinc-700 transition cursor-pointer appearance-none">
+                        <select id="qualitySelect" class="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-4 py-3 text-sm text-zinc-300 focus:outline-none focus:border-zinc-700 transition cursor-pointer appearance-none">
                             <!-- As opções serão populadas dinamicamente via JS -->
                         </select>
                         <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-zinc-500">
@@ -263,7 +262,7 @@ HTML_TEMPLATE = r"""
                 </div>
                 
                 <div class="flex items-end">
-                    <button onclick="iniciarDownload()" id="downloadBtn" class="w-full bg-emerald-200 hover:bg-emerald-100 text-emerald-950 font-bold text-xs uppercase tracking-wider py-3.5 rounded-xl active:scale-95 transition-all duration-200 flex items-center justify-center gap-2">
+                    <button onclick="iniciarDownload()" id="downloadBtn" class="w-full bg-emerald-700 hover:bg-emerald-600 text-white font-bold text-xs uppercase tracking-wider py-3.5 rounded-lg active:scale-95 transition-all duration-200 flex items-center justify-center gap-2">
                         <i class="fa-solid fa-download"></i> 
                         <span id="downloadText">Baixar Agora</span>
                         <div id="downloadSpinner" class="spinner spinner-emerald hidden"></div>
@@ -271,16 +270,16 @@ HTML_TEMPLATE = r"""
                 </div>
             </div>
 
-            <div id="downloadStatus" class="hidden rounded-xl border border-emerald-900/70 bg-emerald-950/20 p-4" role="status" aria-live="polite">
+            <div id="downloadStatus" class="hidden rounded-lg border border-zinc-700 bg-zinc-800 p-4" role="status" aria-live="polite">
                 <div class="flex items-start gap-3">
-                    <i id="downloadStatusIcon" class="fa-solid fa-cloud-arrow-down text-emerald-300 mt-0.5"></i>
+                    <i id="downloadStatusIcon" class="fa-solid fa-cloud-arrow-down text-zinc-300 mt-0.5"></i>
                     <div class="min-w-0 flex-1">
-                        <p id="downloadStatusTitle" class="text-sm font-semibold text-emerald-100">Preparando o download...</p>
-                        <p id="downloadStatusDetail" class="mt-1 text-xs leading-relaxed text-emerald-200/70">O servidor está baixando e processando o arquivo. Isso pode levar alguns minutos.</p>
+                        <p id="downloadStatusTitle" class="text-sm font-semibold text-zinc-100">Preparando o download...</p>
+                        <p id="downloadStatusDetail" class="mt-1 text-xs leading-relaxed text-zinc-300">O servidor está baixando e processando o arquivo. Isso pode levar alguns minutos.</p>
                     </div>
                 </div>
-                <div id="downloadProgressTrack" class="mt-3 hidden h-1.5 overflow-hidden rounded-full bg-emerald-950" role="progressbar" aria-label="Progresso da transferência" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
-                    <div id="downloadProgressBar" class="h-full rounded-full bg-emerald-300 transition-[width] duration-200" style="width: 0%"></div>
+                <div id="downloadProgressTrack" class="mt-3 hidden h-1.5 overflow-hidden rounded-full bg-zinc-700" role="progressbar" aria-label="Progresso da transferência" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                    <div id="downloadProgressBar" class="h-full rounded-full bg-zinc-200 transition-[width] duration-200" style="width: 0%"></div>
                 </div>
             </div>
         </div>
@@ -418,15 +417,15 @@ HTML_TEMPLATE = r"""
             const track = document.getElementById('downloadProgressTrack');
             const bar = document.getElementById('downloadProgressBar');
 
-            status.classList.remove('hidden', 'border-emerald-900/70', 'bg-emerald-950/20', 'border-rose-900/70', 'bg-rose-950/20');
-            status.classList.add(erro ? 'border-rose-900/70' : 'border-emerald-900/70', erro ? 'bg-rose-950/20' : 'bg-emerald-950/20');
+            status.classList.remove('hidden', 'border-zinc-700', 'bg-zinc-800', 'border-rose-800', 'bg-rose-950');
+            status.classList.add(erro ? 'border-rose-800' : 'border-zinc-700', erro ? 'bg-rose-950' : 'bg-zinc-800');
             icon.className = erro
                 ? 'fa-solid fa-triangle-exclamation text-rose-300 mt-0.5'
                 : progresso === 100
-                    ? 'fa-solid fa-circle-check text-emerald-300 mt-0.5'
-                    : 'fa-solid fa-cloud-arrow-down text-emerald-300 mt-0.5';
-            title.className = erro ? 'text-sm font-semibold text-rose-100' : 'text-sm font-semibold text-emerald-100';
-            detail.className = erro ? 'mt-1 text-xs leading-relaxed text-rose-200/70' : 'mt-1 text-xs leading-relaxed text-emerald-200/70';
+                    ? 'fa-solid fa-circle-check text-zinc-100 mt-0.5'
+                    : 'fa-solid fa-cloud-arrow-down text-zinc-300 mt-0.5';
+            title.className = erro ? 'text-sm font-semibold text-rose-100' : 'text-sm font-semibold text-zinc-100';
+            detail.className = erro ? 'mt-1 text-xs leading-relaxed text-rose-200' : 'mt-1 text-xs leading-relaxed text-zinc-300';
             title.textContent = titulo;
             detail.textContent = detalhe;
 
